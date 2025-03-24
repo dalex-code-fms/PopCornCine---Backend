@@ -2,8 +2,8 @@ package fr.popcorncine.Services;
 
 import fr.popcorncine.Entities.User;
 import fr.popcorncine.Repository.UserRepository;
-import fr.popcorncine.services.ImplAuthService;
-import fr.popcorncine.services.ImplUserService;
+import fr.popcorncine.services.AuthServiceImpl;
+import fr.popcorncine.services.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -21,10 +21,10 @@ class UserServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private ImplAuthService authService;
+    private AuthServiceImpl authService;
 
     @InjectMocks
-    private ImplUserService userService;
+    private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {

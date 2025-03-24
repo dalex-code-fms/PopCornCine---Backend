@@ -1,7 +1,7 @@
 package fr.popcorncine.Services;
 
 import fr.popcorncine.Repository.UserRepository;
-import fr.popcorncine.services.ImplAuthService;
+import fr.popcorncine.services.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -18,7 +18,7 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @InjectMocks
-    private ImplAuthService authService;
+    private AuthServiceImpl authService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 

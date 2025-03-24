@@ -6,5 +6,5 @@ public interface AuthService {
 
      String hashPassword(String password);
      boolean verifyPassword(String rawPassword, String hashedPassword);
-     User login(String email, String password);
+     String login(String email, String password);
 }

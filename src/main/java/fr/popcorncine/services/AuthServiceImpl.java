@@ -1,6 +1,7 @@
 package fr.popcorncine.services;
 
 import fr.popcorncine.Entities.User;
+import fr.popcorncine.Exceptions.AuthenticationException;
 import fr.popcorncine.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,10 +14,13 @@ import java.util.Optional;
  */
 
 @Service
-public class ImplAuthService implements AuthService {
+public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private JwtServiceImpl jwtService;
 
     private final BCryptPasswordEncoder passwordEncoder =
             new BCryptPasswordEncoder();
@@ -53,21 +57,21 @@ public class ImplAuthService implements AuthService {
      * @throws IllegalArgumentException if credentials are invalid.
      */
     @Override
-    public User login(String email, String password){
+    public String login(String email, String password){
         Optional<User> existingUser = userRepository.findByEmail(email);
 
         if (existingUser.isEmpty()){
-            throw new IllegalArgumentException("Cette utilisateur n'existe " +
+            throw new AuthenticationException("Cette utilisateur n'existe " +
                     "pas.");
         }
 
         User user = existingUser.get();
 
         if (!verifyPassword(password, user.getPassword())) {
-            throw new IllegalArgumentException("Email ou mot de passe " +
+            throw new AuthenticationException("Email ou mot de passe " +
                     "incorrects.");
         }
 
-        return user;
+        return jwtService.generateToken(user.getEmail());
     }
 }
