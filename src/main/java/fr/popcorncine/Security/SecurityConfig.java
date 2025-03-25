@@ -25,7 +25,8 @@ public class SecurityConfig {
                 // Configure request authorization
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/users/register").permitAll() // Public access to register
-                        .requestMatchers("/api/users/login").permitAll()    // Public access to login (optional)
+                        .requestMatchers("/api/users/login").permitAll()
+                        .requestMatchers("/api/users/confirm").permitAll() // Public access to login (optional)
                         .anyRequest().authenticated()                       // All other endpoints require authentication
                 )
                 // Disable CSRF (replacement for csrf().disable())

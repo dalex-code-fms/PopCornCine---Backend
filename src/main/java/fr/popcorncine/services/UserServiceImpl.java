@@ -6,6 +6,8 @@ import fr.popcorncine.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -20,6 +22,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private AuthServiceImpl authService;
+
+    @Autowired
+    private JwtServiceImpl jwtService;
+
+    @Autowired
+    private EmailService emailService;
 
     /**
      * Registers a new user in the system.
@@ -56,5 +64,26 @@ public class UserServiceImpl implements UserService {
         newUser.setPhone(userDTO.getPhone());
 
         userRepository.save(newUser);
+
+        String token = jwtService.generateConfirmationToken(newUser.getEmail());
+        String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
+
+        String confirmationLink = "http://localhost:8080/api/users/confirm" +
+                "?email=" + newUser.getEmail() + "&token=" + encodedToken;
+
+
+        emailService.sendConfirmationEmail(newUser.getEmail(), confirmationLink);
+    }
+
+    public void confirmUserEmail(String token, String email){
+        if (!jwtService.validateConfirmationToken(token, email)){
+            throw new IllegalArgumentException("Token de confirmation " +
+                    "invalide ou expiré.");
+        }
+
+        User user =
+                userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable."));
+                user.setVerified(true);
+                userRepository.save(user);
     }
 }

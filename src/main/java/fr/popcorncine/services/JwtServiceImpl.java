@@ -53,4 +53,32 @@ public class JwtServiceImpl implements JwtService{
                 .getExpiration()
                 .before(new Date());
     }
+
+    public String generateConfirmationToken(String email){
+        String token = Jwts.builder()
+                .setSubject(email)
+                .claim("type", "confirmation")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+
+        return token;
+    }
+
+    public boolean validateConfirmationToken(String token, String email) {
+        if (isTokenExpired(token)) {
+            return false;
+        }
+
+        String tokenType = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("type", String.class);
+
+        return "confirmation".equals(tokenType) && email.equals(extractEmail(token));
+    }
+
 }

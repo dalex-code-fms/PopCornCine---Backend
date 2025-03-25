@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
@@ -49,6 +51,18 @@ public class UserController {
             return ResponseEntity.ok(Map.of("token", token));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/confirm")
+    public ResponseEntity<String> confirmUser(@RequestParam String token, @RequestParam String email) {
+        try {
+            String decodedToken = URLDecoder.decode(token, StandardCharsets.UTF_8);
+
+            userService.confirmUserEmail(decodedToken, email);
+            return ResponseEntity.ok("Email confirmé avec succès !");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Erreur de confirmation : " + e.getMessage());
         }
     }
 
