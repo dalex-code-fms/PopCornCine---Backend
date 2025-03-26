@@ -1,14 +1,22 @@
 package fr.popcorncine.services;
 
 import fr.popcorncine.DTO.UserDTO;
+import fr.popcorncine.DTO.UserUpdateDTO;
 import fr.popcorncine.Entities.User;
 import fr.popcorncine.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service handling user management (registration, updates, etc.).
@@ -85,5 +93,51 @@ public class UserServiceImpl implements UserService {
                 userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable."));
                 user.setVerified(true);
                 userRepository.save(user);
+    }
+
+    public void updateUserProfile(String email, UserUpdateDTO userUpdateDTO){
+        User user = userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable"));
+
+        user.setFirstName(userUpdateDTO.getFirstName());
+        user.setLastName(userUpdateDTO.getLastName());
+        user.setAge(userUpdateDTO.getAge());
+
+        if (!user.getPhone().equals(userUpdateDTO.getPhone())) {
+            Optional<User> existingUserByPhone = userRepository.findByPhone(userUpdateDTO.getPhone());
+            if (existingUserByPhone.isPresent() && !existingUserByPhone.get().getId().equals(user.getId())) {
+                throw new IllegalArgumentException("Ce numéro de téléphone est déjà utilisé !");
+            }
+            user.setPhone(userUpdateDTO.getPhone());
+        }
+
+        user.setDescription(userUpdateDTO.getDescription());
+
+        userRepository.save(user);
+    }
+
+    public String uploadProfilePhoto(String email, MultipartFile file) throws IOException {
+        User user = userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable."));
+
+        String fileType = file.getContentType();
+        if (fileType == null || !fileType.startsWith("image/")) {
+            throw new IllegalArgumentException("Le fichier doit être une image !");
+        }
+
+        String uploadDir = "uploads/profile_pictures/";
+        String fileExtension = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
+        String fileName = email + "_" + UUID.randomUUID() + fileExtension;
+
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)){
+            Files.createDirectories(uploadPath);
+        }
+
+        Path filePath = uploadPath.resolve(fileName);
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        user.setPhotoUrl("/" + uploadDir + fileName);
+        userRepository.save(user);
+
+        return filePath.toString();
     }
 }

@@ -55,15 +55,13 @@ public class JwtServiceImpl implements JwtService{
     }
 
     public String generateConfirmationToken(String email){
-        String token = Jwts.builder()
+        return Jwts.builder()
                 .setSubject(email)
                 .claim("type", "confirmation")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
-
-        return token;
     }
 
     public boolean validateConfirmationToken(String token, String email) {
