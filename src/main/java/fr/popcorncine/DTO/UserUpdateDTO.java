@@ -3,6 +3,7 @@ package fr.popcorncine.DTO;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
 @Setter
@@ -22,4 +23,6 @@ public class UserUpdateDTO {
     private String phone;
 
     private String description;
+
+    private MultipartFile photo;
 }

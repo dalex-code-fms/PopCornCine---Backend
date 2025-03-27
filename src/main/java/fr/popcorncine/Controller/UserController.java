@@ -36,17 +36,13 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserDTO userDTO) {
-
         try {
             userService.registerUser(userDTO);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("message", "Utilisateur enregistré avec " +
-                            "succès !"));
-        } catch(IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "error", e.getMessage()));
+                    .body(Map.of("message", "Utilisateur enregistré avec succès !"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-
     }
 
     @PostMapping("/login")
@@ -63,39 +59,28 @@ public class UserController {
     public ResponseEntity<String> confirmUser(@RequestParam String token, @RequestParam String email) {
         try {
             String decodedToken = URLDecoder.decode(token, StandardCharsets.UTF_8);
-
             userService.confirmUserEmail(decodedToken, email);
             return ResponseEntity.ok("Email confirmé avec succès !");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(400).body("Erreur de confirmation : " + e.getMessage());
+            return ResponseEntity.badRequest().body("Erreur de confirmation : " + e.getMessage());
         }
     }
 
-    @PutMapping("/update")
+    @PutMapping(value = "/update", consumes = {"multipart/form-data"})
     public ResponseEntity<?> updateUserProfile(@RequestHeader("Authorization") String token,
-                                               @Valid @RequestBody UserUpdateDTO userUpdateDTO){
+                                               @RequestPart("user") @Valid UserUpdateDTO userUpdateDTO,
+                                               @RequestPart(value = "photo", required = false) MultipartFile photo) {
+        String email = null;
         try {
-            String email = jwtService.extractEmail(token.replace("Bearer ", ""));
-
-            userService.updateUserProfile(email, userUpdateDTO);
-            return ResponseEntity.ok(Map.of("message", "Profil mis à jour " +
-                    "avec succès !"));
-        } catch (IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "error", e.getMessage()));
-        }
-    }
-
-    @PostMapping("/upload-photo")
-    public ResponseEntity<?> uploadProfilePhoto(@RequestHeader("Authorization") String token,
-                                                @RequestParam("file") MultipartFile file){
-        try {
-            String email = jwtService.extractEmail(token.replace("Bearer ", ""));
-            String photoPath = userService.uploadProfilePhoto(email, file);
-            return ResponseEntity.ok(Map.of("photoUrl", photoPath));
+            email = jwtService.extractEmail(token.replace("Bearer ", ""));
+            userService.updateUserProfile(email, userUpdateDTO, photo);
+            return ResponseEntity.ok(Map.of("message", "Profil mis à jour avec succès !"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Echec du télechargement"));
+            logger.error("Erreur lors de la mise à jour du profil pour {}: {}", email, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur serveur lors de la mise à jour du profil"));
         }
     }
-
 }

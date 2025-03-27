@@ -1,5 +1,6 @@
 package fr.popcorncine.services;
 
+import fr.popcorncine.Exceptions.AuthenticationException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -32,12 +33,16 @@ public class JwtServiceImpl implements JwtService{
     }
 
     public String extractEmail(String token){
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+        } catch (Exception e) {
+            throw new AuthenticationException("Token invalide ou expiré.");
+        }
     }
 
     public boolean validateToken(String token, String email){

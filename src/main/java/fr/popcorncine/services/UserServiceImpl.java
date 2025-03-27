@@ -18,10 +18,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Service handling user management (registration, updates, etc.).
- */
-
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -37,30 +33,15 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private EmailService emailService;
 
-    /**
-     * Registers a new user in the system.
-     *
-     * This method checks if the email is already in use,
-     * ask the AuthService to hash the password,
-     * and then saves the user.
-     *
-     * @param userDTO The user to be registered.
-     * @throws IllegalArgumentException if the email is already in use.
-     */
+    private static final String UPLOAD_DIR = "uploads/profile_pictures/";
+
     @Override
     public void registerUser(UserDTO userDTO) {
-        Optional<User> existingUserByEmail =
-                userRepository.findByEmail(userDTO.getEmail());
-
-        Optional<User> existingUserByPhone =
-                userRepository.findByPhone(userDTO.getPhone());
-
-
-        if (existingUserByEmail.isPresent()) {
+        if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Cet email est déjà utilisé !");
-        } else if (existingUserByPhone.isPresent()){
-            throw new IllegalArgumentException("Ce nùmero de téléphone est " +
-                    "déjà utilisé !");
+        }
+        if (userRepository.findByPhone(userDTO.getPhone()).isPresent()) {
+            throw new IllegalArgumentException("Ce numéro de téléphone est déjà utilisé !");
         }
 
         User newUser = new User();
@@ -74,70 +55,56 @@ public class UserServiceImpl implements UserService {
         userRepository.save(newUser);
 
         String token = jwtService.generateConfirmationToken(newUser.getEmail());
-        String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
-
-        String confirmationLink = "http://localhost:8080/api/users/confirm" +
-                "?email=" + newUser.getEmail() + "&token=" + encodedToken;
-
-
+        String confirmationLink = "http://localhost:8080/api/users/confirm?email=" +
+                newUser.getEmail() + "&token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
         emailService.sendConfirmationEmail(newUser.getEmail(), confirmationLink);
     }
 
-    public void confirmUserEmail(String token, String email){
-        if (!jwtService.validateConfirmationToken(token, email)){
-            throw new IllegalArgumentException("Token de confirmation " +
-                    "invalide ou expiré.");
+    public void confirmUserEmail(String token, String email) {
+        if (!jwtService.validateConfirmationToken(token, email)) {
+            throw new IllegalArgumentException("Token de confirmation invalide ou expiré");
         }
-
-        User user =
-                userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable."));
-                user.setVerified(true);
-                userRepository.save(user);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        user.setVerified(true);
+        userRepository.save(user);
     }
 
-    public void updateUserProfile(String email, UserUpdateDTO userUpdateDTO){
-        User user = userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable"));
+    public void updateUserProfile(String email, UserUpdateDTO userUpdateDTO, MultipartFile photo) throws IOException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
 
         user.setFirstName(userUpdateDTO.getFirstName());
         user.setLastName(userUpdateDTO.getLastName());
         user.setAge(userUpdateDTO.getAge());
 
-        if (!user.getPhone().equals(userUpdateDTO.getPhone())) {
-            Optional<User> existingUserByPhone = userRepository.findByPhone(userUpdateDTO.getPhone());
-            if (existingUserByPhone.isPresent() && !existingUserByPhone.get().getId().equals(user.getId())) {
+        String newPhone = userUpdateDTO.getPhone();
+        if (newPhone != null && !newPhone.equals(user.getPhone())) {
+            if (userRepository.findByPhone(newPhone).filter(u -> !u.getId().equals(user.getId())).isPresent()) {
                 throw new IllegalArgumentException("Ce numéro de téléphone est déjà utilisé !");
             }
-            user.setPhone(userUpdateDTO.getPhone());
+            user.setPhone(newPhone);
         }
 
         user.setDescription(userUpdateDTO.getDescription());
 
-        userRepository.save(user);
-    }
+        if (photo != null && !photo.isEmpty()) {
+            String contentType = photo.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new IllegalArgumentException("Le fichier doit être une image");
+            }
 
-    public String uploadProfilePhoto(String email, MultipartFile file) throws IOException {
-        User user = userRepository.findByEmail(email).orElseThrow(()-> new IllegalArgumentException("Utilisateur introuvable."));
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            Files.createDirectories(uploadPath); // Crée le dossier si nécessaire
 
-        String fileType = file.getContentType();
-        if (fileType == null || !fileType.startsWith("image/")) {
-            throw new IllegalArgumentException("Le fichier doit être une image !");
+            String fileExtension = photo.getOriginalFilename().substring(photo.getOriginalFilename().lastIndexOf("."));
+            String fileName = UUID.randomUUID() + fileExtension;
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            user.setPhotoUrl("/" + UPLOAD_DIR + fileName);
         }
 
-        String uploadDir = "uploads/profile_pictures/";
-        String fileExtension = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-        String fileName = email + "_" + UUID.randomUUID() + fileExtension;
-
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)){
-            Files.createDirectories(uploadPath);
-        }
-
-        Path filePath = uploadPath.resolve(fileName);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-        user.setPhotoUrl("/" + uploadDir + fileName);
         userRepository.save(user);
-
-        return filePath.toString();
     }
 }
