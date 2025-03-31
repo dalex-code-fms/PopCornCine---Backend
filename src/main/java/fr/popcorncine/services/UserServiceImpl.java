@@ -15,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -70,6 +69,11 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+    }
+
     public void updateUserProfile(String email, UserUpdateDTO userUpdateDTO, MultipartFile photo) throws IOException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
@@ -95,7 +99,7 @@ public class UserServiceImpl implements UserService {
             }
 
             Path uploadPath = Paths.get(UPLOAD_DIR);
-            Files.createDirectories(uploadPath); // Crée le dossier si nécessaire
+            Files.createDirectories(uploadPath);
 
             String fileExtension = photo.getOriginalFilename().substring(photo.getOriginalFilename().lastIndexOf("."));
             String fileName = UUID.randomUUID() + fileExtension;
@@ -104,7 +108,6 @@ public class UserServiceImpl implements UserService {
 
             user.setPhotoUrl("/" + UPLOAD_DIR + fileName);
         }
-
         userRepository.save(user);
     }
 }

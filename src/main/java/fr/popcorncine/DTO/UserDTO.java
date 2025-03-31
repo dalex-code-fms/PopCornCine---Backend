@@ -23,7 +23,7 @@ public class UserDTO {
         @NotBlank(message = "Le nom est obligatoire.")
         private String lastName;
 
-        @Min(value = 12, message = "L'âge minimum est de 12 ans.")
+        @Min(value = 18, message = "L'âge minimum est de 18 ans.")
         private int age;
 
         @NotNull(message = "Le numéro de téléphone est obligatoire.")

@@ -1,7 +1,9 @@
 package fr.popcorncine.Controller;
 
+import fr.popcorncine.DTO.LoginDTO;
 import fr.popcorncine.DTO.UserDTO;
 import fr.popcorncine.DTO.UserUpdateDTO;
+import fr.popcorncine.Entities.User;
 import fr.popcorncine.Exceptions.AuthenticationException;
 import fr.popcorncine.services.AuthServiceImpl;
 import fr.popcorncine.services.JwtServiceImpl;
@@ -38,17 +40,20 @@ public class UserController {
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserDTO userDTO) {
         try {
             userService.registerUser(userDTO);
+            String token = this.jwtService.generateToken(userDTO.getEmail());
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("message", "Utilisateur enregistré avec succès !"));
+                    .body(Map.of("message", "Utilisateur enregistré avec " +
+                            "succès !", "token", token));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> credentials) {
+    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginDTO loginDTO) {
         try {
-            String token = authService.login(credentials.get("email"), credentials.get("password"));
+            String token = authService.login(loginDTO.getEmail(),
+                    loginDTO.getPassword());
             return ResponseEntity.ok(Map.of("token", token));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
@@ -81,6 +86,17 @@ public class UserController {
             logger.error("Erreur lors de la mise à jour du profil pour {}: {}", email, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Erreur serveur lors de la mise à jour du profil"));
+        }
+    }
+
+    @GetMapping(value = "/profile")
+    public ResponseEntity<?> getUserProfile(@RequestHeader("Authorization")String token){
+        try {
+            String email = jwtService.extractEmail(token.replace("Bearer", ""));
+            User user = userService.getUserByEmail(email);
+            return ResponseEntity.ok(user);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Token invalide ou utilisateur non trouvé"));
         }
     }
 }

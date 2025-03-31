@@ -38,3 +38,6 @@ spring:
       fr.popcorncine: DEBUG
       springframework: DEBUG
       org.springframework.security: DEBUG
+  web:
+    resources:
+      static-locations: classpath:/static/,file:uploads/
