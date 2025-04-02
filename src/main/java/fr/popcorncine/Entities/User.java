@@ -1,5 +1,6 @@
 package fr.popcorncine.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -53,4 +54,11 @@ public class User {
 
     @ElementCollection
     private List<String> preferences;
+
+    @OneToMany(mappedBy = "host", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<Event> hostedEvents;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Participation> participations;
 }
